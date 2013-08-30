@@ -1,222 +1,217 @@
-// p01
-def last[T](l: List[T]): T = l.last
+import scala.annotation.tailrec
 
-// p02
-def penultimate[T](l: List[T]): T = l(l.size-2)
-
-// p03
-def nth[T](index: Int, l: List[T]): T = l(index)
-
-// p04
-def length[T](l: List[T]): Int = l.size
-
-// p05
-def reverse[T](l: List[T]): List[T] = l.reverse
-
-// p06
-def isPalindrome[T](l: List[T]): Boolean = l == l.reverse 
-
-// p07
-def flatten(l: List[Any]): List[Any] = l flatMap {
-  case xs: List[_] => flatten(xs)
-  case x => List(x)
-}
-
-// p08
-def compress[T](l: List[T]): List[T] = l match {
-  case Nil => Nil
-  case x :: xs => x :: compress(xs.dropWhile(_ == x))
-}
-
-// p09
-def pack[T](xs: List[T]): List[List[T]] = xs match {
-  case Nil      => Nil
-  case x :: xs1 => 
-    val (first, rest) = xs span (y => y == x) 
-    first :: pack(rest)
-}
-
-// p10
-def encode[T](xs: List[T]): List[(Int, T)] = {
-  pack(xs) map (ys => (ys.length, ys.head))
-}
-
-// p11
-def encodeModified[T](xs: List[T]): List[Any] = {
-  encode(xs) map { x => if (x._1 == 1) x._2 else x }
+object Probs {
+  // 01
+  def last[A](list: List[A]): A = list match {
+    case x :: Nil => x
+    case x :: xs => last(xs)
+    case Nil => throw new NoSuchElementException
   }
 
-// p12 
-def decode[T](xs: List[(Int, T)]): List[T] = {
-  def fill[T](n: Int, elem: T, counter: Int, acc: List[T]): List[T] = {
-    if (counter == n) acc
-    else fill(n, elem, counter + 1, elem :: acc)
-}
-  xs flatMap { x => fill(x._1, x._2, 0, List()) }
+  // 02
+  def penultimate[A](list: List[A]): A = list match {
+    case x :: xs :: Nil => x
+    case x :: xs => penultimate(xs)
+    case _ => throw new NoSuchElementException
   }
 
-// p13
-def encodeDirect[T](xs: List[T]): List[(Int, T)] = {
-  def packHelper[T](ls: List[T]): List[List[T]] = {
-    if (ls.isEmpty) List()  
-    else { 
-      val matchedElems = ls takeWhile { x => x == ls.head }
-      val remaining = ls dropWhile { x => x == ls.head }
-      matchedElems :: packHelper(remaining)
+  // 03
+  def nth[A](n: Int, list: List[A]): A = n match {
+    case 0 => list.head
+    case _ => nth(n-1, list.tail)
+  }
+
+  // 04
+  def length[A](list: List[A]): Int = {
+    def count(acc: Int, xs: List[A]): Int = xs match {
+      case Nil => acc
+      case y :: ys => count (acc + 1, ys)
+    }
+    count(0, list)
+  }
+
+  // 05
+  def reverse[A](list: List[A]): List[A] = {
+    @tailrec
+    def loop(acc: List[A], xs: List[A]): List[A] = xs match {
+      case Nil => acc
+      case y :: ys => loop(y :: acc, ys)
+    }
+    loop(List(), list)
+  }
+
+  // 06
+  def isPalindrome[A](list: List[A]) = list == reverse(list)
+
+  // 07
+  def flatten(list: List[_]): List[Any] = list match {
+    case Nil => Nil
+    case (head: List[_]) :: tail => flatten(head) ::: flatten(tail)
+    case head :: tail => head :: flatten(tail)
+  }
+
+  // 08
+  def compress[A](list: List[A]): List[A] = {
+    @tailrec
+    def loop(acc: List[A], xs: List[A]): List[A] = xs match {
+      case y :: ys => 
+        if (!acc.contains(y)) loop(acc :+ y, ys) 
+        else loop(acc, ys)
+      case Nil => acc
+    }
+    loop(List(), list)
+  }
+
+  // 09
+  def pack[A](list: List[A]): List[List[A]] = {
+    @tailrec
+    def loop[A](xs: List[A], acc: List[List[A]]): List[List[A]] = xs match {
+      case elem :: tail => 
+        if (acc != Nil && elem == acc.head.head) 
+          loop(tail, (elem :: acc.head) :: acc.tail)
+        else 
+          loop(tail, List(elem) :: acc)
+      case Nil => acc
+    }
+    loop(list, List()).reverse
+  }
+
+  // 10
+  def encode[A](list: List[A]): List[(Int, A)] = 
+    pack(list).map{ elem => (elem.size, elem.head) }
+
+  // 11
+  def encodeModified[A](list: List[A]): List[Any] = 
+    pack(list).map{ elem: List[A] => if (elem.size > 1) (elem.size, elem.head) else elem.head }
+
+  // 12
+  def decode[A](list: List[(Int, A)]): List[A] = 
+    list.flatMap( elem => List.fill(elem._1)(elem._2))
+
+  // 13
+  def encodeDirect[A](ls: List[A]): List[(Int, A)] = {
+    if (ls.isEmpty) Nil
+    else {
+      val (packed, next) = ls span { _ == ls.head }
+      (packed.length, packed.head) :: encodeDirect(next)
+    }
+  }
+
+  // 14
+  def duplicate[A](list: List[A]): List[A] = list match {
+    case Nil => Nil
+    case x :: xs => x :: x :: duplicate(xs)
+  }
+
+  // 15
+  def duplicateN[A](n: Int, list: List[A]): List[A] = 
+    list.flatMap( elem => List.fill(n)(elem) )
+
+  // 16
+  def drop[A](n: Int, list: List[A]): List[A] = {
+    @tailrec
+    def loop[A](counter: Int, xs: List[A], acc: List[A]): List[A] = xs match {
+      case Nil => acc
+      case head :: tail => {
+        if (counter == 1) loop(n, tail, acc)
+        else loop(counter-1,tail, acc :+ head)
       }
     }
-  packHelper(xs) map { x => (x.size, x.head) }
+    loop(n,list, Nil)
   }
 
-// p14
-def duplicate[T](xs: List[T]): List[T] = xs match {
-  case Nil => Nil
-  case h :: rest => h :: List(h) ++ duplicate(rest)
-}
-
-// p15
-def duplicateN[T](n: Int, xs: List[T]): List[T] = {
-  def dupN(n: Int, xs: List[T], count: Int): List[T] = {
-    if (xs.isEmpty) xs
-    else if (count != n) xs.head :: dupN(n, xs, count+1)
-    else dupN(n, xs.tail, 0)
-}
-  dupN(n, xs, 0)
-  }
-
-// p16
-def drop[T](n: Int, xs: List[T]): List[T] = {
-  def loop(n: Int, ls: List[T], acc: List[T], counter: Int): List[T] = {
-    if (ls.isEmpty) acc
-    else if (counter != n) {
-      val appended = acc :+ ls.head
-      loop(n, ls.tail, appended, counter + 1)
-}
-else loop(n, ls.tail, acc, 0)
+  // 17
+  def split[A](n: Int, list: List[A]): (List[A], List[A]) = {
+    @tailrec
+    def loop[A](counter: Int, xs: List[A], tup: (List[A], List[A])): 
+    (List[A], List[A]) = xs match {
+      case Nil => tup
+      case head :: tail => {
+        if (counter >= n) 
+          loop(counter + 1, tail, (tup._1, tup._2 :+ head))                   
+        else 
+          loop(counter + 1, tail, (tup._1 :+ head, tup._2))
+      }
     }
-  loop(n-1, xs, List(), 0)
+    loop(0, list, (List(), List()))
   }
 
-// p17
-def split[T](n: Int, xs: List[T]): (List[T], List[T]) = {
-  xs splitAt n
-}
-
-// p18
-def slice[T](start: Int, end: Int, xs: List[T]): List[T] = {
-  xs slice (start, end)
-}
-
-// p19
-def rotate[T](n: Int, xs: List[T]): List[T] = {
-  if (n >= 0)  xs.drop(n) ++ xs.take(n)
-  else xs.drop(xs.size+n) ++ xs.take(xs.size+n)
-}
-
-// p20
-def removeAt[T](n: Int, xs: List[T]): (List[T], T) = {
-  if (xs.isEmpty) throw new NoSuchElementException
-  else {
-    val split = xs.splitAt(n)
-    (split._1 ++ split._2.tail, split._2.head) 
-  }
-}
-
-// p21
-def insertAt[T](elem: T, index: Int, xs: List[T]): List[T] = {
-  val begin = xs.splitAt(index)._1
-  val end = xs.splitAt(index)._2
-  begin.head :: (elem :: end)
-}
-
-// p22
-def range(begin: Int, end: Int): List[Int] = (begin to end).toList
-
-// p23
-def randomSelect[T](n: Int, xs: List[T]): List[T] = {
-  val r = new util.Random
-  def randLoop(ls: List[T], acc: List[T], counter: Int): List[T] = {
-    if (counter < n) {
-      val lsRemoved = removeAt(r.nextInt(ls.size), ls)
-      randLoop(lsRemoved._1, lsRemoved._2 :: acc, counter + 1)
-    } 
-    else acc
-  }
-  randLoop(xs, List(), 0)
-}
-
-// p24
-def lotto(n: Int, setRange: Int): List[Int] = {
-  randomSelect(n, List.range(1,setRange+1))
-}
-
-// p25
-def randomPermute[T](xs: List[T]): List[T] = {
-  val r = util.Random
-  def loop(remaining: List[T], acc: List[T]): List[T] = remaining match {
-    case Nil => acc
-    case _ => {
-      val temp = removeAt(r.nextInt(remaining.size), remaining)
-      loop(temp._1, temp._2 :: acc)
+  // 18
+  def slice[A](i: Int, k: Int, list: List[A]): List[A] = {
+    @tailrec
+    def loop[A](index: Int, xs: List[A], acc: List[A]): List[A] = xs match {
+      case Nil => acc
+      case head :: tail => 
+        if (index >= i && index < k) 
+          loop(index + 1, tail, acc :+ head)
+        else 
+          loop(index + 1, tail, acc)
     }
+    loop(0,list, Nil)
   }
-  loop(xs, List())
-}
 
-// p26
+  // 19
+  def rotate[A](n: Int, list: List[A]): List[A] = 
+    (list drop n) ++ (list take n)
 
-// p27
-
-// p28
-// a)
-def lsort[T](xs: List[List[T]]):List[List[T]] = {
-  val sizes = xs map ( x => (x,x.size))
-  val sortedSizes = sizes.sortWith( ((x, y) => x._2 < y._2))
-  sortedSizes map ( x => x._1)
-}
-// b
-
-// p31
-def isPrime(n: Int): Boolean = {
-  (2 to n/2) forall { n % _ != 0 }
-}
-
-// p32
-def gcd(a: Int, b: Int): Int = {
-  if (b == 0) a
-  else gcd(b, a % b)
-}
-
-// p33
-def isCoprimeTo(a: Int, b: Int): Boolean = {
-  gcd(a,b) == 1
-}
-
-// p34
-def totient(n: Int): Int = {
-  def loop(xs: List[Int], count: Int): Int = {
-    if (xs.isEmpty) count
-    else if (isCoprimeTo(xs.head, n)) loop(xs.tail, count+1)
-    else loop(xs.tail, count)
+  // 20
+  def removeAt[A](index: Int, list: List[A]): (List[A], A) = {
+    if (index < 0 || index >= list.size) throw new IndexOutOfBoundsException
+    @tailrec
+    def loop[A](counter: Int, xs: List[A], pair: (List[A],A)): (List[A],A) = 
+    xs match {
+      case Nil => pair
+      case head :: tail => 
+        if (counter == index) (pair._1 ++ tail, head)
+        else loop(counter + 1, tail, (pair._1 :+ head, pair._2))
+    }
+    loop(0, list, (Nil, list.head))
   }
-  loop((1 to n).toList, 0)
+
+  // 21
+  def insertAt[A](elem: A, index: Int, list: List[A]): List[A] = {
+    @tailrec
+    def loop[A](e: A, counter: Int, xs: List[A], acc: List[A]): List[A] = xs match {
+      case head :: tail => 
+        if (counter == 0) (acc :+ e) ++ tail
+        else loop(e, counter - 1, tail, acc :+ head)
+      case Nil => acc :+ e
+    }
+    loop(elem, index, list, Nil)
+  }
+
+  // 22
+  def range(start: Int, end: Int): List[Int] = {
+    @tailrec
+    def loop(s: Int, e: Int, acc: List[Int]): List[Int] = (s, e) match {
+      case (x, y) if (x > y) => acc
+      case (_, y) => loop(s, e - 1, y :: acc)
+    }
+    loop(start, end, Nil)
+  }
+  
+  // 23
+  def randomSelect[A](n: Int, list: List[A]): List[A] = {
+    @tailrec
+    def loop[A](counter: Int, xs: List[A], 
+      acc: List[A], r: util.Random): List[A] = counter match {
+      case 0 => acc
+      case _ => 
+        val index = r.nextInt(xs.size)
+        val ys = removeAt(index, xs)
+        loop(counter - 1, ys._1, ys._2 :: acc, r)
+    }
+    loop(n, list, Nil, util.Random)
+  }
+
+  // 24
+  def lotto(n: Int, limit: Int): List[Int] = {
+    val list = range(1, limit)
+    randomSelect(n, list)
+  }
+
+  // 25
+  def randomPermute[A](list: List[A]): List[A] = {
+    randomSelect(list.size, list)
+  }
 }
-
-// p35
-
-// p36
-
-// p37
-
-// p38
-
-// p39
-def listPrimesInRange(r: Range): List[Int] = {
-  r.toList filter { isPrime(_) }
-}
-
-// p40
-
-// p41
-
-// p46
